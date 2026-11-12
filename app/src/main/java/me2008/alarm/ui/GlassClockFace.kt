@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp as colorLerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -81,7 +83,7 @@ fun GlassClockFace(
         else
             listOf(Color(0xFFF8F9FA), Color(0xFFE8EAF6))
         drawCircle(
-            brush = RadialGradient(
+            brush = Brush.radialGradient(
                 colors = bgColors,
                 center = Offset(cx, cy),
                 radius = radius * 1.2f
@@ -103,7 +105,7 @@ fun GlassClockFace(
 
         // Glass highlight (top arc shimmer)
         drawArc(
-            brush = SweepGradient(
+            brush = Brush.sweepGradient(
                 colors = listOf(
                     glassHighlight,
                     Color.Transparent,
@@ -111,8 +113,7 @@ fun GlassClockFace(
                     glassHighlight,
                     glassHighlight
                 ),
-                center = Offset(cx, cy),
-                startAngle = -30f
+                center = Offset(cx, cy)
             ),
             startAngle = 0f, sweepAngle = 360f,
             useCenter = false,
@@ -238,24 +239,25 @@ fun GlassClockFace(
         // ── Glass reflection (specular highlight) ──
         // A moving arc of white that sweeps slowly around the face
         val sweep = (System.currentTimeMillis() % 8000) / 8000f * 360f
-        drawArc(
-            brush = SweepGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = 0.0f),
-                    Color.White.copy(alpha = 0.06f),
-                    Color.White.copy(alpha = 0.12f),
-                    Color.White.copy(alpha = 0.06f),
-                    Color.White.copy(alpha = 0.0f),
+        rotate(degrees = sweep, pivot = Offset(cx, cy)) {
+            drawArc(
+                brush = Brush.sweepGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.0f),
+                        Color.White.copy(alpha = 0.06f),
+                        Color.White.copy(alpha = 0.12f),
+                        Color.White.copy(alpha = 0.06f),
+                        Color.White.copy(alpha = 0.0f),
+                    ),
+                    center = Offset(cx, cy)
                 ),
-                center = Offset(cx, cy),
-                startAngle = sweep
-            ),
-            startAngle = 0f, sweepAngle = 360f,
-            useCenter = false,
-            topLeft = Offset(cx - innerR, cy - innerR),
-            size = androidx.compose.ui.geometry.Size(innerR * 2, innerR * 2),
-            style = Stroke(width = ringWidth * 0.6f, cap = StrokeCap.Butt)
-        )
+                startAngle = 0f, sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(cx - innerR, cy - innerR),
+                size = androidx.compose.ui.geometry.Size(innerR * 2, innerR * 2),
+                style = Stroke(width = ringWidth * 0.6f, cap = StrokeCap.Butt)
+            )
+        }
 
         // ── Digital clock overlay ──
         if (showDigital) {
@@ -285,7 +287,7 @@ fun GlassClockFace(
 
         // ── Subtle outer glow ──
         drawCircle(
-            brush = RadialGradient(
+            brush = Brush.radialGradient(
                 colors = listOf(
                     accentColor.copy(alpha = 0.0f),
                     accentColor.copy(alpha = 0.06f),

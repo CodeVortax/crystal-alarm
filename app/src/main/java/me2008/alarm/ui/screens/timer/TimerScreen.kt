@@ -39,12 +39,13 @@ fun TimerScreen() {
             targetValue = if (state.totalSeconds > 0) state.remainingSeconds.toFloat() / state.totalSeconds.toFloat() else 1f,
             animationSpec = tween(500), label = "progress")
 
+        val primaryColor = MaterialTheme.colorScheme.primary
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(250.dp)) {
             Canvas(Modifier.size(250.dp)) {
                 val sw = 16f; val r = (size.minDimension - sw) / 2f
                 val tl = Offset((size.width - r * 2f) / 2f, (size.height - r * 2f) / 2f)
                 drawCircle(color = Color.Gray.copy(alpha = 0.15f), radius = r + sw / 2f, style = Stroke(width = sw, cap = StrokeCap.Round))
-                drawArc(color = MaterialTheme.colorScheme.primary, startAngle = -90f,
+                drawArc(color = primaryColor, startAngle = -90f,
                     sweepAngle = 360f * (1f - progress.value), useCenter = false,
                     topLeft = tl, size = androidx.compose.ui.geometry.Size(r * 2, r * 2),
                     style = Stroke(width = sw, cap = StrokeCap.Round))
