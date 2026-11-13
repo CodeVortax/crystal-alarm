@@ -7,9 +7,9 @@ import me2008.alarm.data.Alarm
 import me2008.alarm.data.DayOfWeek
 import me2008.alarm.service.AlarmScheduler
 
-/** "17 hours 5 minutes" (header) or "17 hours and 5 minutes" (toast). Rounds up to the next minute. */
+/** "17 hours 5 minutes" (header) or "17 hours and 5 minutes" (toast). Whole minutes, rounded down like the stock clock. */
 fun formatDuration(ms: Long, withAnd: Boolean): String {
-    val totalMin = (ms.coerceAtLeast(0L) + 59_999L) / 60_000L
+    val totalMin = ms.coerceAtLeast(0L) / 60_000L
     val d = totalMin / 1440
     val h = (totalMin % 1440) / 60
     val m = totalMin % 60

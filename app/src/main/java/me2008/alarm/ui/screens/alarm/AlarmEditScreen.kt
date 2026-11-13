@@ -5,7 +5,6 @@ package me2008.alarm.ui.screens.alarm
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,13 +29,15 @@ import me2008.alarm.data.DayOfWeek
 import me2008.alarm.service.AlarmScheduler
 import me2008.alarm.ui.clockParts
 import me2008.alarm.ui.components.CircularTimePicker
+import me2008.alarm.ui.components.PillChip
+import me2008.alarm.ui.components.SoftTextField
 import me2008.alarm.ui.components.SoundPicker
 import me2008.alarm.ui.components.TimePickerDialogNew
 import me2008.alarm.ui.formatDuration
 import me2008.alarm.ui.is24Hour
 import me2008.alarm.ui.repeatSummary
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () -> Unit) {
     val context = LocalContext.current
@@ -96,14 +97,24 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
             CircularTimePicker(hour = alarm.hour, minute = alarm.minute,
                 onTimeChange = { h, m -> alarm = alarm.copy(hour = h, minute = m) },
                 modifier = Modifier.padding(horizontal = 8.dp))
-            Text("Drag the bell, or tap the time for exact entry", fontSize = 12.sp, textAlign = TextAlign.Center,
-                color = scheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Drag the bell, or fine-tune by the minute. Tap the time to type it.", fontSize = 12.sp,
+                    textAlign = TextAlign.Center, color = scheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(-5, -1, 1, 5).forEach { delta ->
+                        PillChip(text = if (delta > 0) "+$delta" else "\u2212${-delta}", selected = false, onClick = {
+                            val t = ((alarm.hour * 60 + alarm.minute + delta) % 1440 + 1440) % 1440
+                            alarm = alarm.copy(hour = t / 60, minute = t % 60)
+                        })
+                    }
+                }
+            }
 
             // Label + repeat
             OptionGroup {
-                OutlinedTextField(value = alarm.label, onValueChange = { alarm = alarm.copy(label = it) },
-                    label = { Text("Label") }, placeholder = { Text("Wake up") }, singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp))
+                SoftTextField(value = alarm.label, onValueChange = { alarm = alarm.copy(label = it) },
+                    placeholder = "Label", modifier = Modifier.fillMaxWidth().padding(16.dp))
                 HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -150,11 +161,10 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
                 Column(Modifier.padding(16.dp)) {
                     Text("Snooze", fontSize = 16.sp, color = scheme.onSurface)
                     Spacer(Modifier.height(10.dp))
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        intArrayOf(1, 3, 5, 10, 15, 30).forEach { min ->
-                            FilterChip(selected = alarm.snoozeMinutes == min,
-                                onClick = { alarm = alarm.copy(snoozeMinutes = min) },
-                                label = { Text("$min min", fontSize = 13.sp) })
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        intArrayOf(1, 3, 5, 10, 15, 20, 30).forEach { min ->
+                            PillChip(text = "$min min", selected = alarm.snoozeMinutes == min,
+                                onClick = { alarm = alarm.copy(snoozeMinutes = min) })
                         }
                     }
                 }

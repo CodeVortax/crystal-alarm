@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.cos
@@ -66,9 +65,8 @@ fun SleepDial(
         val box = maxWidth
         val ringR = box / 2 - RingWidth / 2 - RingInset
         val innerR = ringR - RingWidth / 2
-        val twoPi = 2f * Math.PI.toFloat()
-        val bedAngle = bedMinutes / 1440f * twoPi
-        val wakeAngle = wakeMinutes / 1440f * twoPi
+        val bedAngle = dialAngleRad(bedMinutes)
+        val wakeAngle = dialAngleRad(wakeMinutes)
 
         Box(Modifier.align(Alignment.Center).size(innerR * 2).background(scheme.background, RoundedCornerShape(50)))
 
@@ -109,7 +107,7 @@ fun SleepDial(
 
             // Sleep window: from bedtime clockwise to wake-up
             val sweep = (((wakeMinutes - bedMinutes) % 1440 + 1440) % 1440) / 1440f * 360f
-            drawArc(bandColor, startAngle = bedMinutes / 1440f * 360f - 90f, sweepAngle = sweep, useCenter = false,
+            drawArc(bandColor, startAngle = dialAngleDeg(bedMinutes) - 90f, sweepAngle = sweep, useCenter = false,
                 topLeft = Offset(c.x - r, c.y - r), size = Size(r * 2f, r * 2f), style = Stroke(width = ringPx))
 
             for (i in 0 until 96) {

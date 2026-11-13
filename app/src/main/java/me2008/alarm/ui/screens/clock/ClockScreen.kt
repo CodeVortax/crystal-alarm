@@ -27,6 +27,7 @@ import me2008.alarm.data.Cities
 import me2008.alarm.data.WorldClockRepository
 import me2008.alarm.ui.components.AnalogClock
 import me2008.alarm.ui.components.ScreenHeader
+import me2008.alarm.ui.components.SoftTextField
 import me2008.alarm.ui.is24Hour
 import java.time.Instant
 import java.time.ZoneId
@@ -140,8 +141,8 @@ private fun AddCityDialog(existing: List<String>, onDismiss: () -> Unit, onPick:
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Add city") },
         text = {
             Column {
-                OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
-                    placeholder = { Text("Search city or country") }, modifier = Modifier.fillMaxWidth())
+                SoftTextField(value = query, onValueChange = { query = it },
+                    placeholder = "Search city or country", modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(Modifier.heightIn(max = 320.dp)) {
                     items(results.take(100), key = { it.key }) { city ->

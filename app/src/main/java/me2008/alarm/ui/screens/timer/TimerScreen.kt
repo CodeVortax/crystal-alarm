@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,6 +30,7 @@ import me2008.alarm.data.TimerPreset
 import me2008.alarm.service.TimerManager
 import me2008.alarm.ui.components.CircleButton
 import me2008.alarm.ui.components.NumberWheel
+import me2008.alarm.ui.components.PillChip
 import me2008.alarm.ui.formatHms
 import me2008.alarm.ui.is24Hour
 import java.time.LocalTime
@@ -47,7 +47,7 @@ fun TimerScreen() {
 
 @Composable
 private fun TimerSetup() {
-    val scheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
     var hh by remember { mutableIntStateOf(0) }
     var mm by remember { mutableIntStateOf(10) }
     var ss by remember { mutableIntStateOf(0) }
@@ -66,16 +66,16 @@ private fun TimerSetup() {
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TimerPreset.entries.filter { it != TimerPreset.CUSTOM }.forEach { preset ->
-                FilterChip(selected = total == preset.seconds, onClick = {
+                PillChip(text = preset.label, selected = total == preset.seconds, onClick = {
                     hh = (preset.seconds / 3600L).toInt()
                     mm = ((preset.seconds % 3600L) / 60L).toInt()
                     ss = (preset.seconds % 60L).toInt()
                     wheelKey++
-                }, label = { Text(preset.label, fontSize = 13.sp) })
+                })
             }
         }
         Spacer(Modifier.weight(1f))
-        CircleButton(onClick = { TimerManager.start(TimerPreset.CUSTOM, total) }, size = 84.dp, primary = true, enabled = total > 0L) {
+        CircleButton(onClick = { TimerManager.start(TimerPreset.CUSTOM, total, context) }, size = 84.dp, primary = true, enabled = total > 0L) {
             Icon(Icons.Default.PlayArrow, "Start timer", modifier = Modifier.size(40.dp))
         }
         Spacer(Modifier.height(40.dp))

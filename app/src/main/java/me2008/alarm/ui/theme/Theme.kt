@@ -4,7 +4,9 @@ package me2008.alarm.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -12,6 +14,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 // Clean neutral surfaces with a single blue accent: true-black background and soft grey cards in
 // dark mode, light grey background and white cards in light mode.
@@ -27,6 +30,12 @@ private val LightColors = lightColorScheme(
     onSurfaceVariant = Color(0xFF7A7F89),
     outlineVariant = Color(0xFFD5D8DE),
     error = Color(0xFFD93B3B),
+    surfaceTint = Color.Transparent,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFF8F9FA),
+    surfaceContainer = Color(0xFFF0F1F4),
+    surfaceContainerHigh = Color(0xFFFFFFFF),
+    surfaceContainerHighest = Color(0xFFE2E4E9),
 )
 
 private val DarkColors = darkColorScheme(
@@ -41,6 +50,21 @@ private val DarkColors = darkColorScheme(
     onSurfaceVariant = Color(0xFF8E8E93),
     outlineVariant = Color(0xFF48484B),
     error = Color(0xFFFF6B6B),
+    surfaceTint = Color.Transparent,
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF151517),
+    surfaceContainer = Color(0xFF1C1C1E),
+    surfaceContainerHigh = Color(0xFF242426),
+    surfaceContainerHighest = Color(0xFF2C2C2E),
+)
+
+/** Everything is rounded: no sharp corners anywhere (dialogs, menus, fields, chips, cards). */
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp),
+    extraLarge = RoundedCornerShape(32.dp),
 )
 
 @Composable
@@ -61,6 +85,7 @@ fun AlarmTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
+        shapes = AppShapes,
         content = content
     )
 }

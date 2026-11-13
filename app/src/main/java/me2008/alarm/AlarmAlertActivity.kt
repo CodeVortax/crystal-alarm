@@ -24,6 +24,7 @@ import me2008.alarm.service.AlarmForegroundService
 import me2008.alarm.service.AlarmReceiver
 import me2008.alarm.service.AlarmScheduler
 import me2008.alarm.ui.clockParts
+import me2008.alarm.ui.components.SoftTextField
 import me2008.alarm.ui.is24Hour
 import me2008.alarm.ui.theme.AlarmTheme
 import kotlin.random.Random
@@ -99,8 +100,8 @@ private fun AlertScreen(alarmId: String?, puzzleAnswer: Int?, onSnooze: (Int) ->
                 Spacer(Modifier.height(8.dp))
                 Text(AlarmAlertActivity.puzzleText, fontSize = 32.sp, fontWeight = FontWeight.Medium, color = scheme.primary)
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(value = answer, onValueChange = { answer = it.filter { c -> c.isDigit() || c == '-' }; wrong = false },
-                    label = { Text("Answer") }, singleLine = true, isError = wrong, modifier = Modifier.width(160.dp),
+                SoftTextField(value = answer, onValueChange = { answer = it.filter { c -> c.isDigit() || c == '-' }; wrong = false },
+                    placeholder = "Answer", isError = wrong, modifier = Modifier.width(160.dp),
                     textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center))
                 if (wrong) Text("Wrong answer, try again", color = scheme.error, fontSize = 12.sp)
                 Spacer(Modifier.height(24.dp))

@@ -45,6 +45,15 @@
             android:name="me2008.alarm.service.AlarmReceiver"
             android:exported="false" />
 
+        <service
+            android:name="me2008.alarm.service.TimerRingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <receiver
+            android:name="me2008.alarm.service.TimerReceiver"
+            android:exported="false" />
+
         <receiver
             android:name="me2008.alarm.service.BootReceiver"
             android:exported="false">
