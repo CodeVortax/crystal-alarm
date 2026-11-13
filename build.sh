@@ -42,3 +42,23 @@ if [ -d "$SCRIPT_DIR/app/build/outputs/apk" ]; then
   echo "==> APKs:"
   find "$SCRIPT_DIR/app/build/outputs/apk" -name "*.apk" 2>/dev/null
 fi
+
+# Copy the built APK to the phone's Downloads folder so it can be installed from a file manager.
+# Skipped for "clean". Override the destination with: DOWNLOAD_DIR=/some/dir ./build.sh
+if [ "${1:-debug}" != "clean" ]; then
+  VARIANT="${1:-debug}"
+  [ "$VARIANT" = "install" ] && VARIANT="debug"
+  APK="$(find "$SCRIPT_DIR/app/build/outputs/apk/$VARIANT" -name "*.apk" 2>/dev/null | head -n 1)"
+  DEST=""
+  for d in "${DOWNLOAD_DIR:-}" "$HOME/storage/downloads" "/sdcard/Download"; do
+    if [ -n "$d" ] && [ -d "$d" ] && [ -w "$d" ]; then DEST="$d"; break; fi
+  done
+  if [ -n "$APK" ] && [ -n "$DEST" ]; then
+    cp "$APK" "$DEST/crystal-alarm-$VARIANT.apk"
+    echo ""
+    echo "==> Copied to $DEST/crystal-alarm-$VARIANT.apk"
+  elif [ -n "$APK" ]; then
+    echo ""
+    echo "==> No Downloads folder found. Run 'termux-setup-storage' once, then build again to get the APK copied."
+  fi
+fi
