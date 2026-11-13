@@ -13,32 +13,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+// Clean neutral surfaces with a single blue accent: true-black background and soft grey cards in
+// dark mode, light grey background and white cards in light mode.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF6C63FF),
-    secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFFE8DEF8),
-    background = Color(0xFFF8F9FA),
-    surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFF0F0F5),
-    onBackground = Color(0xFF1A1A2E),
-    onSurface = Color(0xFF1A1A2E),
+    primary = Color(0xFF2F6BFF),
+    onPrimary = Color.White,
+    secondary = Color(0xFF5B8CFF),
+    background = Color(0xFFF4F5F7),
+    onBackground = Color(0xFF111114),
+    surface = Color.White,
+    onSurface = Color(0xFF111114),
+    surfaceVariant = Color(0xFFE9EBEF),
+    onSurfaceVariant = Color(0xFF7A7F89),
+    outlineVariant = Color(0xFFD5D8DE),
+    error = Color(0xFFD93B3B),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF9D97FF),
-    secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFFE8DEF8),
-    background = Color(0xFF0F0F1A),
-    surface = Color(0xFF1A1A2E),
-    surfaceVariant = Color(0xFF252540),
-    onBackground = Color(0xFFF0F0F5),
-    onSurface = Color(0xFFF0F0F5),
+    primary = Color(0xFF3D7BFF),
+    onPrimary = Color.White,
+    secondary = Color(0xFF6C9BFF),
+    background = Color.Black,
+    onBackground = Color(0xFFF2F2F5),
+    surface = Color(0xFF1C1C1E),
+    onSurface = Color(0xFFF2F2F5),
+    surfaceVariant = Color(0xFF2A2A2D),
+    onSurfaceVariant = Color(0xFF8E8E93),
+    outlineVariant = Color(0xFF48484B),
+    error = Color(0xFFFF6B6B),
 )
 
 @Composable
 fun AlarmTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    // Off by default so the app keeps its own look; flip to true to follow Material You wallpaper colours.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current

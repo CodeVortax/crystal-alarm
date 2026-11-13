@@ -18,11 +18,16 @@ import java.util.Calendar
  * Each alarm fires into [AlarmReceiver], which starts the foreground service.
  */
 object AlarmScheduler {
-    fun schedule(context: Context, alarm: Alarm) {
+    /**
+     * @param rollOver when true, a one-time alarm whose time already passed today is set for
+     * tomorrow (used when the user creates or turns on an alarm). When false (re-scheduling after
+     * it rang, or after boot) a passed one-time alarm is left unscheduled.
+     */
+    fun schedule(context: Context, alarm: Alarm, rollOver: Boolean = false) {
         cancel(context, alarm.id)
         if (!alarm.enabled) return
 
-        val triggerAt = nextTrigger(alarm) ?: return
+        val triggerAt = nextTrigger(alarm, rollOver) ?: return
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra(EXTRA_ALARM_ID, alarm.id)
         }
@@ -35,9 +40,9 @@ object AlarmScheduler {
 
     fun cancel(context: Context, alarmId: String) {
         val intent = Intent(context, AlarmReceiver::class.java)
+        val immutable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else 0
         val pi = PendingIntent.getBroadcast(context, alarmId.hashCode() and 0xFFFF, intent,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else 0
-            or PendingIntent.FLAG_NO_CREATE)
+            immutable or PendingIntent.FLAG_NO_CREATE)
         pi?.cancel()
     }
 
@@ -49,7 +54,8 @@ object AlarmScheduler {
         AlarmRepository(context).get(alarmId)?.let { schedule(context, it) }
     }
 
-    private fun nextTrigger(alarm: Alarm): Long? {
+    /** Next time [alarm] should ring, or null if it has no upcoming occurrence. */
+    fun nextTrigger(alarm: Alarm, rollOver: Boolean = false): Long? {
         val now = Calendar.getInstance()
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, alarm.hour)
@@ -57,8 +63,12 @@ object AlarmScheduler {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        if (alarm.repeatDays.isEmpty())
-            return if (cal.timeInMillis > now.timeInMillis) cal.timeInMillis else null
+        if (alarm.repeatDays.isEmpty()) {
+            if (cal.timeInMillis > now.timeInMillis) return cal.timeInMillis
+            if (!rollOver) return null
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            return cal.timeInMillis
+        }
 
         val targetDays = alarm.repeatDays.map { it.value }
         for (offset in 0..7) {
@@ -66,7 +76,9 @@ object AlarmScheduler {
                 timeInMillis = cal.timeInMillis
                 add(Calendar.DAY_OF_YEAR, offset)
             }
-            val dow = test.get(Calendar.DAY_OF_WEEK)
+            // Calendar: Sunday = 1 … Saturday = 7. The app's DayOfWeek: Monday = 1 … Sunday = 7.
+            val calDow = test.get(Calendar.DAY_OF_WEEK)
+            val dow = if (calDow == Calendar.SUNDAY) 7 else calDow - 1
             if (dow in targetDays && test.timeInMillis > now.timeInMillis) return test.timeInMillis
         }
         return null

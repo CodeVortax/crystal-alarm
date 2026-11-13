@@ -53,12 +53,17 @@ class AlarmAlertActivity : ComponentActivity() {
         val pi = PendingIntent.getBroadcast(this, 2000 + alarm.id.hashCode() % 1000, intent, flags)
         (getSystemService(ALARM_SERVICE) as android.app.AlarmManager)
             .setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + min * 60_000L, pi)
-        AlarmForegroundService.stop(this); AlarmScheduler.schedule(this, alarm); finish()
+        AlarmForegroundService.stop(this); AlarmScheduler.schedule(this, alarm); disableIfOneShot(alarm); finish()
+    }
+
+    /** A one-time alarm has done its job once it rang, so switch it off in the list. */
+    private fun disableIfOneShot(alarm: me2008.alarm.data.Alarm) {
+        if (alarm.repeatDays.isEmpty()) AlarmRepository(this).save(alarm.copy(enabled = false))
     }
 
     private fun dismiss() {
         AlarmForegroundService.stop(this)
-        alarmId?.let { AlarmRepository(this).get(it) }?.let { AlarmScheduler.schedule(this, it) }
+        alarmId?.let { AlarmRepository(this).get(it) }?.let { AlarmScheduler.schedule(this, it); disableIfOneShot(it) }
         finish()
     }
 
