@@ -42,3 +42,43 @@ fun is24Hour(context: Context): Boolean = android.text.format.DateFormat.is24Hou
 fun clockParts(hour: Int, minute: Int, is24: Boolean): Pair<String, String?> =
     if (is24) String.format("%02d:%02d", hour, minute) to null
     else String.format("%d:%02d", if (hour % 12 == 0) 12 else hour % 12, minute) to (if (hour < 12) "AM" else "PM")
+
+/** Stopwatch text split for display: ("01:23", ".45") or ("1:02:03", ".45") once past an hour. */
+fun stopwatchParts(ms: Long): Pair<String, String> {
+    val total = ms.coerceAtLeast(0L)
+    val cs = (total % 1000L) / 10L
+    val s = (total / 1000L) % 60L
+    val m = (total / 60_000L) % 60L
+    val h = total / 3_600_000L
+    val main = if (h > 0) String.format("%d:%02d:%02d", h, m, s) else String.format("%02d:%02d", m, s)
+    return main to String.format(".%02d", cs)
+}
+
+/** Countdown text: "09:59" or "1:00:00". */
+fun formatHms(totalSeconds: Long): String {
+    val t = totalSeconds.coerceAtLeast(0L)
+    val h = t / 3600L
+    val m = (t % 3600L) / 60L
+    val s = t % 60L
+    return if (h > 0) String.format("%d:%02d:%02d", h, m, s) else String.format("%02d:%02d", m, s)
+}
+
+/** "22:30" in 24h mode, "10:30 PM" in 12h mode. */
+fun formatMinuteOfDay(minuteOfDay: Int, is24: Boolean): String {
+    val (t, suffix) = clockParts(minuteOfDay / 60, minuteOfDay % 60, is24)
+    return if (suffix == null) t else "$t $suffix"
+}
+
+/** Minutes between bedtime and wake-up going forward around the clock (0 if the same time). */
+fun sleepMinutes(bedMinutes: Int, wakeMinutes: Int): Int = ((wakeMinutes - bedMinutes) % 1440 + 1440) % 1440
+
+/** "8 hr 30 min", "8 hr" or "45 min". */
+fun formatSleepDuration(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return when {
+        h == 0 -> "$m min"
+        m == 0 -> "$h hr"
+        else -> "$h hr $m min"
+    }
+}

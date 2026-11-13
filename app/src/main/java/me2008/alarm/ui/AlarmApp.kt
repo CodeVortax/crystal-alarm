@@ -27,6 +27,7 @@ import me2008.alarm.data.AlarmRepository
 import me2008.alarm.ui.components.ScreenHeader
 import me2008.alarm.ui.screens.alarm.AlarmEditScreen
 import me2008.alarm.ui.screens.alarm.AlarmListScreen
+import me2008.alarm.ui.screens.alarm.BedtimeScreen
 import me2008.alarm.ui.screens.clock.ClockScreen
 import me2008.alarm.ui.screens.settings.SettingsScreen
 import me2008.alarm.ui.screens.stopwatch.StopwatchScreen
@@ -45,6 +46,7 @@ sealed interface Screen {
     data object Main : Screen
     data class EditAlarm(val alarmId: String?) : Screen
     data object Settings : Screen
+    data object Bedtime : Screen
 }
 
 @Composable
@@ -63,6 +65,7 @@ fun AlarmApp() {
                 is Screen.EditAlarm -> AlarmEditScreen(
                     alarmId = s.alarmId, repository = repository, onBack = { screen = Screen.Main })
                 is Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Main })
+                is Screen.Bedtime -> BedtimeScreen(onBack = { screen = Screen.Main })
                 is Screen.Main -> Scaffold(
                     containerColor = MaterialTheme.colorScheme.background,
                     bottomBar = { BottomBar(currentTab) { currentTab = it } },
@@ -77,6 +80,7 @@ fun AlarmApp() {
                                 Tab.ALARM -> AlarmListScreen(repository = repository,
                                     onAddAlarm = { screen = Screen.EditAlarm(null) },
                                     onEditAlarm = { screen = Screen.EditAlarm(it) },
+                                    onBedtime = { screen = Screen.Bedtime },
                                     onSettings = openSettings)
                                 Tab.WORLD_CLOCK -> ClockScreen(onSettings = openSettings)
                                 Tab.STOPWATCH -> Column(Modifier.fillMaxSize()) {

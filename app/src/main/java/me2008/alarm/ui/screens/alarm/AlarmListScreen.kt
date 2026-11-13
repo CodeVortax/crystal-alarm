@@ -5,6 +5,7 @@ package me2008.alarm.ui.screens.alarm
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bed
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,10 +30,14 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import me2008.alarm.data.Alarm
 import me2008.alarm.data.AlarmRepository
+import me2008.alarm.data.BedtimeRepository
 import me2008.alarm.service.AlarmScheduler
 import me2008.alarm.ui.clockParts
 import me2008.alarm.ui.components.ScreenHeader
 import me2008.alarm.ui.formatDuration
+import me2008.alarm.ui.formatMinuteOfDay
+import me2008.alarm.ui.formatSleepDuration
+import me2008.alarm.ui.sleepMinutes
 import me2008.alarm.ui.is24Hour
 import me2008.alarm.ui.nextAlarmMillis
 import me2008.alarm.ui.repeatSummary
@@ -40,6 +47,7 @@ fun AlarmListScreen(
     repository: AlarmRepository,
     onAddAlarm: () -> Unit,
     onEditAlarm: (String) -> Unit,
+    onBedtime: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -67,6 +75,7 @@ fun AlarmListScreen(
                     lineHeight = 38.sp, color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 36.dp))
             }
+            item { BedtimeBanner(is24 = is24, onClick = onBedtime) }
             if (alarms.isEmpty()) {
                 item {
                     Text("Tap + to add your first alarm", textAlign = TextAlign.Center,
@@ -151,5 +160,32 @@ private fun AlarmCard(alarm: Alarm, is24: Boolean, onToggle: () -> Unit, onClick
                 uncheckedThumbColor = Color.White, uncheckedTrackColor = scheme.outlineVariant,
                 uncheckedBorderColor = Color.Transparent, checkedBorderColor = Color.Transparent),
         )
+    }
+}
+
+/** Entry to the sleep schedule: shows the saved bedtime window, or invites the user to set one up. */
+@Composable
+private fun BedtimeBanner(is24: Boolean, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val repo = remember { BedtimeRepository(context) }
+    val configured = remember { repo.isConfigured() }
+    val schedule = remember { repo.load() }
+    val subtitle = if (configured) "${formatMinuteOfDay(schedule.bedMinutes, is24)} \u2192 ${formatMinuteOfDay(schedule.wakeMinutes, is24)}" +
+        "  \u00B7  ${formatSleepDuration(sleepMinutes(schedule.bedMinutes, schedule.wakeMinutes))}"
+    else "Set your sleep schedule"
+
+    Row(
+        Modifier.padding(horizontal = 16.dp, vertical = 5.dp).fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp)).background(scheme.surface)
+            .clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Bed, contentDescription = null, tint = Color(0xFF6E6AE8), modifier = Modifier.size(28.dp))
+        Column(Modifier.weight(1f).padding(start = 16.dp)) {
+            Text("Bedtime", fontSize = 17.sp, color = scheme.onSurface)
+            Text(subtitle, fontSize = 13.sp, color = scheme.onSurfaceVariant)
+        }
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = scheme.onSurfaceVariant)
     }
 }

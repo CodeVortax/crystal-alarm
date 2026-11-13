@@ -5,33 +5,37 @@ package me2008.alarm.data
 import android.content.Context
 import java.time.ZoneId
 
-/** Remembers which cities (time zone ids such as "Europe/Paris") the user added to World clock. */
+/** Remembers which cities the user added to World clock. */
 class WorldClockRepository(context: Context) {
     private val prefs = context.getSharedPreferences("crystal_world_clock", Context.MODE_PRIVATE)
 
-    fun getAll(): List<String> =
-        (prefs.getString("zones", "") ?: "").split("|")
-            .filter { it.isNotBlank() && runCatching { ZoneId.of(it) }.isSuccess }
+    fun getAll(): List<City> {
+        val raw = prefs.getString("cities", null)
+        val cities = if (raw != null) {
+            raw.split(";").mapNotNull { entry ->
+                val name = entry.substringBefore('|', "")
+                val zone = entry.substringAfter('|', "")
+                // Country is looked up again so the stored text stays tiny.
+                if (name.isBlank() || zone.isBlank()) null
+                else City(name, Cities.all.firstOrNull { it.name == name && it.zoneId == zone }?.country
+                    ?: Cities.zoneRegion(zone), zone)
+            }
+        } else {
+            // Older builds stored plain zone ids separated by "|".
+            (prefs.getString("zones", "") ?: "").split("|").filter { it.isNotBlank() }
+                .map { City(Cities.zoneName(it), Cities.zoneRegion(it), it) }
+        }
+        return cities.filter { runCatching { ZoneId.of(it.zoneId) }.isSuccess }
+    }
 
-    fun add(zoneId: String) {
+    fun add(city: City) {
         val list = getAll()
-        if (zoneId !in list) persist(list + zoneId)
+        if (list.none { it.key == city.key }) persist(list + city)
     }
 
-    fun remove(zoneId: String) = persist(getAll() - zoneId)
+    fun remove(city: City) = persist(getAll().filter { it.key != city.key })
 
-    private fun persist(list: List<String>) {
-        prefs.edit().putString("zones", list.joinToString("|")).apply()
-    }
-
-    companion object {
-        /** "America/Los_Angeles" -> "Los Angeles" */
-        fun cityName(zoneId: String): String = zoneId.substringAfterLast('/').replace('_', ' ')
-        fun regionName(zoneId: String): String = zoneId.substringBefore('/').replace('_', ' ')
-
-        /** Every selectable city zone, sorted by city name. Skips legacy ids like "EST" and "Etc/GMT+3". */
-        fun allCities(): List<String> = ZoneId.getAvailableZoneIds()
-            .filter { '/' in it && !it.startsWith("Etc/") && !it.startsWith("SystemV/") && !it.startsWith("US/") }
-            .sortedBy { cityName(it) }
+    private fun persist(list: List<City>) {
+        prefs.edit().putString("cities", list.joinToString(";") { "${it.name}|${it.zoneId}" }).apply()
     }
 }

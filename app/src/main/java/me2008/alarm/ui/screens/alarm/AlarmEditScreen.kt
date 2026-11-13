@@ -184,12 +184,12 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
 
 /** A rounded card that groups related rows, like the "Alarm Options" block in the sleep-schedule screen. */
 @Composable
-private fun OptionGroup(content: @Composable ColumnScope.() -> Unit) {
+internal fun OptionGroup(content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface), content = content)
 }
 
 @Composable
-private fun SettingsToggle(label: String, description: String?, checked: Boolean, onToggle: (Boolean) -> Unit) {
+internal fun SettingsToggle(label: String, description: String?, checked: Boolean, onToggle: (Boolean) -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

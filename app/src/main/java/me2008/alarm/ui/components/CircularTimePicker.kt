@@ -35,8 +35,8 @@ import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private val RingWidth = 44.dp
-private val RingInset = 4.dp
+internal val RingWidth = 44.dp
+internal val RingInset = 4.dp
 
 /**
  * A 24-hour dial like the Health sleep-schedule picker: 12 AM at the top, 12 PM at the bottom.
@@ -127,7 +127,15 @@ fun CircularTimePicker(
                 x = box / 2 + ringR * sin(knobAngle) - 11.dp,
                 y = box / 2 - ringR * cos(knobAngle) - 11.dp))
 
-        // Hour labels, following the sleep dial: 12AM, 2, 4, 6AM, 8, 10, 12PM, 2, 4, 6PM, 8, 10
+        DialLabels(box, innerR)
+    }
+}
+
+/** Hour labels (12AM, 2, 4, 6AM … 10) plus the night/day markers inside a 24h dial of width [box]. */
+@Composable
+internal fun BoxScope.DialLabels(box: androidx.compose.ui.unit.Dp, innerR: androidx.compose.ui.unit.Dp) {
+    val scheme = MaterialTheme.colorScheme
+        // Following the sleep dial: 12AM, 2, 4, 6AM, 8, 10, 12PM, 2, 4, 6PM, 8, 10
         val labelR = innerR * 0.74f
         for (i in 0 until 12) {
             val main = i % 3 == 0
@@ -147,11 +155,19 @@ fun CircularTimePicker(
             modifier = Modifier.size(22.dp).offset(x = box / 2 - 11.dp, y = box / 2 - innerR * 0.38f - 11.dp))
         Icon(Icons.Outlined.WbSunny, null, tint = Color(0xFFFFB300),
             modifier = Modifier.size(22.dp).offset(x = box / 2 - 11.dp, y = box / 2 + innerR * 0.38f - 11.dp))
-    }
+}
+
+/** Minute of the day (0..1439, 5-minute steps) at touch position [pos] on a 24h dial, 12AM at the top. */
+internal fun minutesAt(pos: Offset, size: IntSize): Int {
+    val dx = pos.x - size.width / 2f
+    val dy = pos.y - size.height / 2f
+    var deg = Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble()))
+    if (deg < 0) deg += 360.0
+    return ((deg / 360.0 * 1440.0 / 5.0).roundToInt() * 5) % 1440
 }
 
 /** Is [pos] on the ring band (so scrolling over the dial face isn't hijacked)? */
-private fun androidx.compose.ui.unit.Density.nearRing(pos: Offset, size: IntSize): Boolean {
+internal fun androidx.compose.ui.unit.Density.nearRing(pos: Offset, size: IntSize): Boolean {
     val ringPx = RingWidth.toPx()
     val r = size.width.coerceAtMost(size.height) / 2f - ringPx / 2f - RingInset.toPx()
     val dist = hypot(pos.x - size.width / 2f, pos.y - size.height / 2f)
@@ -160,10 +176,6 @@ private fun androidx.compose.ui.unit.Density.nearRing(pos: Offset, size: IntSize
 
 /** Converts a touch position to a time on the 24h dial and reports it, snapped to 5 minutes. */
 private fun pick(pos: Offset, size: IntSize, onPick: (Int, Int) -> Unit) {
-    val dx = pos.x - size.width / 2f
-    val dy = pos.y - size.height / 2f
-    var deg = Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble()))
-    if (deg < 0) deg += 360.0
-    val total = ((deg / 360.0 * 1440.0 / 5.0).roundToInt() * 5) % 1440
+    val total = minutesAt(pos, size)
     onPick(total / 60, total % 60)
 }

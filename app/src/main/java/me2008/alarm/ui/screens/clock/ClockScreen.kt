@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import me2008.alarm.data.City
+import me2008.alarm.data.Cities
 import me2008.alarm.data.WorldClockRepository
 import me2008.alarm.ui.components.AnalogClock
 import me2008.alarm.ui.components.ScreenHeader
@@ -40,7 +42,7 @@ fun ClockScreen(onSettings: () -> Unit) {
     val repo = remember { WorldClockRepository(context) }
     var zones by remember { mutableStateOf(repo.getAll()) }
     var showAdd by remember { mutableStateOf(false) }
-    var toRemove by remember { mutableStateOf<String?>(null) }
+    var toRemove by remember { mutableStateOf<City?>(null) }
     val is24 = is24Hour(context)
     val localZone = remember { ZoneId.systemDefault() }
 
@@ -76,19 +78,19 @@ fun ClockScreen(onSettings: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        items(zones, key = { it }) { id ->
-            val zone = ZoneId.of(id)
+        items(zones, key = { it.key }) { city ->
+            val zone = ZoneId.of(city.zoneId)
             val there = ZonedDateTime.ofInstant(Instant.ofEpochSecond(nowSecond), zone)
             val diffMin = (there.offset.totalSeconds - localNow.offset.totalSeconds) / 60
             Row(
                 Modifier.padding(horizontal = 16.dp, vertical = 5.dp).fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface)
-                    .combinedClickable(onClick = {}, onLongClick = { toRemove = id })
+                    .combinedClickable(onClick = {}, onLongClick = { toRemove = city })
                     .padding(horizontal = 24.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(WorldClockRepository.cityName(id), fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(city.name, fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurface)
                     Text("${there.format(dateFmt)}  |  ${offsetText(diffMin)}", fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -105,13 +107,13 @@ fun ClockScreen(onSettings: () -> Unit) {
         }
     }
 
-    if (showAdd) AddCityDialog(existing = zones, onDismiss = { showAdd = false }, onPick = {
+    if (showAdd) AddCityDialog(existing = zones.map { it.key }, onDismiss = { showAdd = false }, onPick = {
         repo.add(it); zones = repo.getAll(); showAdd = false
     })
-    toRemove?.let { id ->
+    toRemove?.let { city ->
         AlertDialog(onDismissRequest = { toRemove = null },
-            title = { Text("Remove ${WorldClockRepository.cityName(id)}?") },
-            confirmButton = { TextButton(onClick = { repo.remove(id); zones = repo.getAll(); toRemove = null }) {
+            title = { Text("Remove ${city.name}?") },
+            confirmButton = { TextButton(onClick = { repo.remove(city); zones = repo.getAll(); toRemove = null }) {
                 Text("Remove", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { toRemove = null }) { Text("Cancel") } })
     }
@@ -132,27 +134,25 @@ private fun offsetText(diffMin: Int): String {
 }
 
 @Composable
-private fun AddCityDialog(existing: List<String>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+private fun AddCityDialog(existing: List<String>, onDismiss: () -> Unit, onPick: (City) -> Unit) {
     var query by remember { mutableStateOf("") }
-    val all = remember { WorldClockRepository.allCities() }
-    val results = remember(query, existing) {
-        all.filter { it !in existing && (query.isBlank() ||
-            WorldClockRepository.cityName(it).contains(query.trim(), ignoreCase = true) ||
-            WorldClockRepository.regionName(it).contains(query.trim(), ignoreCase = true)) }
-    }
+    val results = remember(query, existing) { Cities.search(query, existing) }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Add city") },
         text = {
             Column {
                 OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
-                    placeholder = { Text("Search city or region") }, modifier = Modifier.fillMaxWidth())
+                    placeholder = { Text("Search city or country") }, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(Modifier.heightIn(max = 320.dp)) {
-                    items(results.take(100), key = { it }) { id ->
-                        Column(Modifier.fillMaxWidth().clickable { onPick(id) }.padding(vertical = 10.dp, horizontal = 4.dp)) {
-                            Text(WorldClockRepository.cityName(id), fontSize = 16.sp)
-                            Text(WorldClockRepository.regionName(id), fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    items(results.take(100), key = { it.key }) { city ->
+                        Column(Modifier.fillMaxWidth().clickable { onPick(city) }.padding(vertical = 10.dp, horizontal = 4.dp)) {
+                            Text(city.name, fontSize = 16.sp)
+                            Text(city.country, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                    }
+                    if (results.isEmpty()) item {
+                        Text("No matching city", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(8.dp))
                     }
                 }
             }

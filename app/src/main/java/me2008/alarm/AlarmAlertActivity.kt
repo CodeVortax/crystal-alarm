@@ -9,6 +9,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,8 @@ import me2008.alarm.data.AlarmRepository
 import me2008.alarm.service.AlarmForegroundService
 import me2008.alarm.service.AlarmReceiver
 import me2008.alarm.service.AlarmScheduler
+import me2008.alarm.ui.clockParts
+import me2008.alarm.ui.is24Hour
 import me2008.alarm.ui.theme.AlarmTheme
 import kotlin.random.Random
 
@@ -74,34 +77,40 @@ class AlarmAlertActivity : ComponentActivity() {
 private fun AlertScreen(alarmId: String?, puzzleAnswer: Int?, onSnooze: (Int) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val alarm = alarmId?.let { AlarmRepository(context).get(it) }
+    val scheme = MaterialTheme.colorScheme
+    val (time, suffix) = if (alarm != null) clockParts(alarm.hour, alarm.minute, is24Hour(context)) else ("--:--" to null)
+    val snoozeMin = alarm?.snoozeMinutes ?: 5
+    var answer by remember { mutableStateOf("") }
+    var wrong by remember { mutableStateOf(false) }
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(if (alarm != null) String.format("%02d:%02d", alarm.hour, alarm.minute) else "--:--",
-                fontSize = 72.sp, fontWeight = FontWeight.Light, letterSpacing = 6.sp, color = MaterialTheme.colorScheme.onBackground)
-            if (alarm?.label?.isNotBlank() == true) Text(alarm.label, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(48.dp))
+    Surface(Modifier.fillMaxSize(), color = scheme.background) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(time, fontSize = 88.sp, fontWeight = FontWeight.Light, color = scheme.onBackground)
+                if (suffix != null) Text(suffix, fontSize = 24.sp, color = scheme.onBackground,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 16.dp))
+            }
+            if (alarm?.label?.isNotBlank() == true) Text(alarm.label, fontSize = 22.sp, color = scheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
 
             if (puzzleAnswer != null) {
-                var answer by remember { mutableStateOf("") }; var wrong by remember { mutableStateOf(false) }
-                Text("Solve to dismiss:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Solve to dismiss", fontSize = 14.sp, color = scheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
-                Text(AlarmAlertActivity.puzzleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(AlarmAlertActivity.puzzleText, fontSize = 32.sp, fontWeight = FontWeight.Medium, color = scheme.primary)
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(value = answer, onValueChange = { answer = it.filter { c -> c.isDigit() || c == '-' }; wrong = false },
-                    label = { Text("Answer") }, singleLine = true, isError = wrong, modifier = Modifier.width(150.dp), textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center))
-                if (wrong) Text("Wrong answer, try again", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { if (answer.toIntOrNull() == puzzleAnswer) onDismiss() else wrong = true }, modifier = Modifier.fillMaxWidth(0.5f)) { Text("Dismiss") }
-            } else {
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.6f).height(56.dp)) { Text("Dismiss", fontSize = 18.sp) }
+                    label = { Text("Answer") }, singleLine = true, isError = wrong, modifier = Modifier.width(160.dp),
+                    textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center))
+                if (wrong) Text("Wrong answer, try again", color = scheme.error, fontSize = 12.sp)
+                Spacer(Modifier.height(24.dp))
             }
 
-            Spacer(Modifier.height(20.dp))
-            Text("Snooze", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                intArrayOf(5, 10, 15, 30).forEach { min -> OutlinedButton(onClick = { onSnooze(min) }) { Text("${min}m") } }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                FilledTonalButton(onClick = { onSnooze(snoozeMin) }, shape = RoundedCornerShape(32.dp),
+                    modifier = Modifier.weight(1f).height(64.dp)) { Text("Snooze $snoozeMin min", fontSize = 16.sp) }
+                Button(onClick = { if (puzzleAnswer == null || answer.toIntOrNull() == puzzleAnswer) onDismiss() else wrong = true },
+                    shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f).height(64.dp)) { Text("Dismiss", fontSize = 16.sp) }
             }
         }
     }
