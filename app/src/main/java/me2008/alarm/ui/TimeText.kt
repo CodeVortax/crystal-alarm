@@ -4,6 +4,7 @@ package me2008.alarm.ui
 
 import android.content.Context
 import me2008.alarm.data.Alarm
+import me2008.alarm.data.isShift
 import me2008.alarm.data.DayOfWeek
 import me2008.alarm.service.AlarmScheduler
 
@@ -81,4 +82,12 @@ fun formatSleepDuration(minutes: Int): String {
         m == 0 -> "$h hr"
         else -> "$h hr $m min"
     }
+}
+
+/** One-line description of when an alarm repeats, including shift patterns and skipped dates. */
+fun alarmSummary(alarm: Alarm): String {
+    val base = if (alarm.isShift) "Shift: ${alarm.shiftOn} on, ${alarm.shiftOff} off" else repeatSummary(alarm.repeatDays)
+    val today = java.time.LocalDate.now().toEpochDay()
+    val skips = alarm.skipDates.count { it >= today }
+    return if (skips > 0) "$base · skips $skips" else base
 }

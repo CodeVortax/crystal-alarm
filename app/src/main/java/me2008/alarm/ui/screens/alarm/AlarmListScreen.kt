@@ -40,7 +40,7 @@ import me2008.alarm.ui.formatSleepDuration
 import me2008.alarm.ui.sleepMinutes
 import me2008.alarm.ui.is24Hour
 import me2008.alarm.ui.nextAlarmMillis
-import me2008.alarm.ui.repeatSummary
+import me2008.alarm.ui.alarmSummary
 
 @Composable
 fun AlarmListScreen(
@@ -135,8 +135,8 @@ private fun AlarmCard(alarm: Alarm, is24: Boolean, onToggle: () -> Unit, onClick
     val scheme = MaterialTheme.colorScheme
     val fade = if (alarm.enabled) 1f else 0.4f
     val (time, suffix) = clockParts(alarm.hour, alarm.minute, is24)
-    val subtitle = if (alarm.label.isNotBlank()) "${alarm.label}, ${repeatSummary(alarm.repeatDays)}"
-    else repeatSummary(alarm.repeatDays)
+    val subtitle = if (alarm.label.isNotBlank()) "${alarm.label}, ${alarmSummary(alarm)}"
+    else alarmSummary(alarm)
 
     Row(
         Modifier.padding(horizontal = 16.dp, vertical = 5.dp).fillMaxWidth()

@@ -11,7 +11,10 @@ import android.os.Build
 import androidx.core.app.AlarmManagerCompat
 import me2008.alarm.data.Alarm
 import me2008.alarm.data.AlarmRepository
-import java.util.Calendar
+import me2008.alarm.data.isShift
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 /**
  * Schedules alarms with Android's AlarmManager.
@@ -56,30 +59,28 @@ object AlarmScheduler {
 
     /** Next time [alarm] should ring, or null if it has no upcoming occurrence. */
     fun nextTrigger(alarm: Alarm, rollOver: Boolean = false): Long? {
-        val now = Calendar.getInstance()
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, alarm.hour)
-            set(Calendar.MINUTE, alarm.minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        if (alarm.repeatDays.isEmpty()) {
-            if (cal.timeInMillis > now.timeInMillis) return cal.timeInMillis
-            if (!rollOver) return null
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-            return cal.timeInMillis
+        val zone = ZoneId.systemDefault()
+        val now = System.currentTimeMillis()
+        val today = LocalDate.now(zone)
+        val time = LocalTime.of(alarm.hour, alarm.minute)
+        fun at(d: LocalDate): Long = d.atTime(time).atZone(zone).toInstant().toEpochMilli()
+
+        if (alarm.repeatDays.isEmpty() && !alarm.isShift) {
+            val t = at(today)
+            if (t > now) return t
+            return if (rollOver) at(today.plusDays(1)) else null
         }
 
-        val targetDays = alarm.repeatDays.map { it.value }
-        for (offset in 0..7) {
-            val test = Calendar.getInstance().apply {
-                timeInMillis = cal.timeInMillis
-                add(Calendar.DAY_OF_YEAR, offset)
-            }
-            // Calendar: Sunday = 1 … Saturday = 7. The app's DayOfWeek: Monday = 1 … Sunday = 7.
-            val calDow = test.get(Calendar.DAY_OF_WEEK)
-            val dow = if (calDow == Calendar.SUNDAY) 7 else calDow - 1
-            if (dow in targetDays && test.timeInMillis > now.timeInMillis) return test.timeInMillis
+        val cycle = (alarm.shiftOn + alarm.shiftOff).toLong()
+        for (offset in 0L..800L) {
+            val d = today.plusDays(offset)
+            val day = d.toEpochDay()
+            if (day in alarm.skipDates) continue
+            val ringsToday = if (alarm.isShift) Math.floorMod(day - alarm.shiftStartEpochDay, cycle) < alarm.shiftOn
+            else alarm.repeatDays.any { it.value == d.dayOfWeek.value } // both use Monday = 1 … Sunday = 7
+            if (!ringsToday) continue
+            val t = at(d)
+            if (t > now) return t
         }
         return null
     }

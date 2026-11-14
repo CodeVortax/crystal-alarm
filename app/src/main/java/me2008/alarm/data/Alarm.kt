@@ -31,7 +31,15 @@ data class Alarm(
     val vibrationPattern: String = "pulse",
     val vibrationCustom: String = "",
     val vibrationStrength: Int = 100,
+    // Shift pattern: ring [shiftOn] days, then stay silent [shiftOff] days, starting from [shiftStartEpochDay]. 0 = off.
+    val shiftOn: Int = 0,
+    val shiftOff: Int = 0,
+    val shiftStartEpochDay: Long = 0L,
+    // Days (as epoch days) on which the alarm stays quiet, e.g. holidays.
+    val skipDates: Set<Long> = emptySet(),
 )
+
+val Alarm.isShift: Boolean get() = shiftOn > 0 && shiftOff > 0
 
 /** One sound in an alarm's mix. [endMs] of 0 means "play to the end"; [startMs] trims the beginning. */
 data class AlarmSound(
@@ -82,6 +90,8 @@ fun Alarm.toJson(): JSONObject = JSONObject().apply {
     put("masterVolume", masterVolume)
     put("vibrationPattern", vibrationPattern); put("vibrationCustom", vibrationCustom)
     put("vibrationStrength", vibrationStrength)
+    put("shiftOn", shiftOn); put("shiftOff", shiftOff); put("shiftStart", shiftStartEpochDay)
+    put("skipDates", JSONArray(skipDates.toList()))
 }
 
 fun alarmFromJson(obj: JSONObject): Alarm = Alarm(
@@ -116,4 +126,11 @@ fun alarmFromJson(obj: JSONObject): Alarm = Alarm(
     vibrationPattern = obj.optString("vibrationPattern", "pulse"),
     vibrationCustom = obj.optString("vibrationCustom", ""),
     vibrationStrength = obj.optInt("vibrationStrength", 100),
+    shiftOn = obj.optInt("shiftOn", 0),
+    shiftOff = obj.optInt("shiftOff", 0),
+    shiftStartEpochDay = obj.optLong("shiftStart", 0L),
+    skipDates = run {
+        val arr = obj.optJSONArray("skipDates") ?: JSONArray()
+        (0 until arr.length()).map { arr.getLong(it) }.toSet()
+    },
 )

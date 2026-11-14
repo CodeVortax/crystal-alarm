@@ -145,6 +145,8 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
                 }
             }
 
+            ScheduleOptions(alarm) { alarm = it }
+
             // Sound + toggles
             OptionGroup {
                 Row(Modifier.fillMaxWidth().clickable { page = "sound" }.padding(16.dp),

@@ -5,6 +5,7 @@ package me2008.alarm.ui.screens.alarm
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import me2008.alarm.data.AlarmRepository
 import me2008.alarm.data.BedtimeRepository
 import me2008.alarm.data.DayOfWeek
+import me2008.alarm.data.SleepHistory
+import me2008.alarm.ui.components.PillChip
 import me2008.alarm.service.AlarmScheduler
 import me2008.alarm.ui.components.SleepDial
 import me2008.alarm.ui.formatDuration
@@ -50,13 +53,16 @@ fun BedtimeScreen(onBack: () -> Unit) {
     var days by remember { mutableStateOf(initial.days) }
     var vibrate by remember { mutableStateOf(initial.vibrate) }
     var ramp by remember { mutableStateOf(initial.volumeRamp) }
+    var reminder by remember { mutableIntStateOf(initial.reminderMin) }
+    var dnd by remember { mutableStateOf(initial.dnd) }
+    val history = remember { SleepHistory(context).entries() }
 
     val sleep = sleepMinutes(bed, wake)
     val meetsGoal = sleep in 420..540 // 7 to 9 hours
 
     fun save() {
         repo.save(initial.copy(bedMinutes = bed, wakeMinutes = wake, wakeAlarm = wakeAlarm, days = days,
-            vibrate = vibrate, volumeRamp = ramp))
+            vibrate = vibrate, volumeRamp = ramp, reminderMin = reminder, dnd = dnd))
         if (wakeAlarm) {
             AlarmRepository(context).get(BedtimeRepository.WAKE_ALARM_ID)
                 ?.let { AlarmScheduler.nextTrigger(it, rollOver = true) }
@@ -138,6 +144,61 @@ fun BedtimeScreen(onBack: () -> Unit) {
                     SettingsToggle("Vibrate", null, vibrate) { vibrate = it }
                     HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
                     SettingsToggle("Gradually louder", "Volume ramps up while it rings", ramp) { ramp = it }
+                }
+            }
+
+            Text("Wind down", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = scheme.onBackground,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+            OptionGroup {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Bedtime reminder", fontSize = 16.sp, color = scheme.onSurface)
+                    Text("A notification before bedtime. It also lets you tap \"I'm going to bed\" so your sleep is tracked.",
+                        fontSize = 12.sp, color = scheme.onSurfaceVariant)
+                    Spacer(Modifier.height(10.dp))
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to "Off", 15 to "15 min", 30 to "30 min", 45 to "45 min", 60 to "1 hour").forEach { (m, label) ->
+                            PillChip(label, reminder == m, { reminder = m })
+                        }
+                    }
+                }
+                HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+                SettingsToggle("Do not disturb at night", "Silences everything except alarms from bedtime until wake-up", dnd) { on ->
+                    dnd = on
+                    val nm = context.getSystemService(android.app.NotificationManager::class.java)
+                    if (on && !nm.isNotificationPolicyAccessGranted) {
+                        Toast.makeText(context, "Allow Crystal in this list so it can switch Do Not Disturb on and off.", Toast.LENGTH_LONG).show()
+                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }
+
+            Text("Sleep history", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = scheme.onBackground,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+            OptionGroup {
+                if (history.isEmpty()) {
+                    Text("Your nights show up here after you dismiss the wake-up alarm.", fontSize = 14.sp,
+                        color = scheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+                } else {
+                    val recent = history.take(7)
+                    Text("Average ${formatSleepDuration(recent.map { it.minutes }.average().toInt())} over the last ${recent.size} night${if (recent.size == 1) "" else "s"}",
+                        fontSize = 15.sp, color = scheme.onSurface, modifier = Modifier.padding(16.dp))
+                    recent.forEach { e ->
+                        val day = java.time.Instant.ofEpochMilli(e.wakeMs).atZone(java.time.ZoneId.systemDefault())
+                            .format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM"))
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(day + if (e.estimated) " (planned bedtime)" else "", fontSize = 13.sp, color = scheme.onSurfaceVariant)
+                                Text(formatSleepDuration(e.minutes), fontSize = 13.sp, color = scheme.onSurface)
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(scheme.surfaceVariant)) {
+                                Box(Modifier.fillMaxWidth((e.minutes / 600f).coerceIn(0.02f, 1f)).fillMaxHeight()
+                                    .clip(RoundedCornerShape(50)).background(if (e.minutes in 420..540) scheme.primary else scheme.outline))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
                 }
             }
             Spacer(Modifier.height(24.dp))

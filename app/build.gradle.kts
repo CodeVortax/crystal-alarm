@@ -14,7 +14,28 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0-dev"
+        versionName = System.getenv("VERSION_NAME") ?: "0.1.0-dev"
+    }
+
+    // Release builds are signed with your own key when KEYSTORE_FILE (+ KEYSTORE_PASSWORD, KEY_ALIAS,
+    // KEY_PASSWORD) are set, e.g. by the GitHub workflow; otherwise they use the debug key so the APK still installs.
+    val releaseKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() && file(it).exists() }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = if (releaseKeystore != null) signingConfigs.getByName("release")
+            else signingConfigs.getByName("debug")
+        }
     }
 
     compileOptions {

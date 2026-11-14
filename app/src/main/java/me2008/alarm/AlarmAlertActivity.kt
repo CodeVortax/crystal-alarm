@@ -20,6 +20,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me2008.alarm.data.AlarmRepository
+import me2008.alarm.data.BedtimeRepository
+import me2008.alarm.data.SleepHistory
+import me2008.alarm.data.isShift
 import me2008.alarm.service.AlarmForegroundService
 import me2008.alarm.service.AlarmReceiver
 import me2008.alarm.service.AlarmScheduler
@@ -62,12 +65,14 @@ class AlarmAlertActivity : ComponentActivity() {
 
     /** A one-time alarm has done its job once it rang, so switch it off in the list. */
     private fun disableIfOneShot(alarm: me2008.alarm.data.Alarm) {
-        if (alarm.repeatDays.isEmpty()) AlarmRepository(this).save(alarm.copy(enabled = false))
+        if (alarm.repeatDays.isEmpty() && !alarm.isShift) AlarmRepository(this).save(alarm.copy(enabled = false))
     }
 
     private fun dismiss() {
         AlarmForegroundService.stop(this)
         alarmId?.let { AlarmRepository(this).get(it) }?.let { AlarmScheduler.schedule(this, it); disableIfOneShot(it) }
+        // Waking up to the sleep-schedule alarm counts as the end of a night's sleep.
+        if (alarmId == BedtimeRepository.WAKE_ALARM_ID) SleepHistory(this).recordWake(BedtimeRepository(this).load())
         finish()
     }
 

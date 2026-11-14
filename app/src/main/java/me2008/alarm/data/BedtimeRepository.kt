@@ -4,6 +4,7 @@ package me2008.alarm.data
 
 import android.content.Context
 import me2008.alarm.service.AlarmScheduler
+import me2008.alarm.service.BedtimeScheduler
 
 /** The user's sleep schedule: when they go to bed and when the wake-up alarm rings. */
 data class SleepSchedule(
@@ -13,6 +14,10 @@ data class SleepSchedule(
     val days: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
     val vibrate: Boolean = true,
     val volumeRamp: Boolean = true,
+    /** Minutes before bedtime to remind you; 0 turns the reminder off. */
+    val reminderMin: Int = 30,
+    /** Switch on Do Not Disturb (alarms still ring) from bedtime until wake-up. */
+    val dnd: Boolean = false,
 )
 
 class BedtimeRepository(private val context: Context) {
@@ -32,6 +37,8 @@ class BedtimeRepository(private val context: Context) {
             }?.toSet()) ?: d.days,
             vibrate = prefs.getBoolean("vibrate", d.vibrate),
             volumeRamp = prefs.getBoolean("volumeRamp", d.volumeRamp),
+            reminderMin = prefs.getInt("reminderMin", d.reminderMin),
+            dnd = prefs.getBoolean("dnd", d.dnd),
         )
     }
 
@@ -42,8 +49,10 @@ class BedtimeRepository(private val context: Context) {
             .putBoolean("wakeAlarm", s.wakeAlarm)
             .putString("days", s.days.joinToString(",") { it.value.toString() })
             .putBoolean("vibrate", s.vibrate).putBoolean("volumeRamp", s.volumeRamp)
+            .putInt("reminderMin", s.reminderMin).putBoolean("dnd", s.dnd)
             .apply()
         syncWakeAlarm(s)
+        BedtimeScheduler.scheduleAll(context)
     }
 
     private fun syncWakeAlarm(s: SleepSchedule) {
