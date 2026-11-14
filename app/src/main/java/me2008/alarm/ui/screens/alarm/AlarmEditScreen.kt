@@ -31,7 +31,7 @@ import me2008.alarm.ui.clockParts
 import me2008.alarm.ui.components.CircularTimePicker
 import me2008.alarm.ui.components.PillChip
 import me2008.alarm.ui.components.SoftTextField
-import me2008.alarm.ui.components.SoundPicker
+import me2008.alarm.data.VibrationPattern
 import me2008.alarm.ui.components.TimePickerDialogNew
 import me2008.alarm.ui.formatDuration
 import me2008.alarm.ui.is24Hour
@@ -45,7 +45,7 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
     val existing = alarmId?.let { repository.get(it) }
     var alarm by remember { mutableStateOf(existing ?: Alarm()) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var showSoundPicker by remember { mutableStateOf(false) }
+    var page by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleted by remember { mutableStateOf(false) }
     val isNew = existing == null
@@ -66,6 +66,10 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
     val untilMs = AlarmScheduler.nextTrigger(alarm.copy(enabled = true), rollOver = true)
     val (time, suffix) = clockParts(alarm.hour, alarm.minute, is24)
     val scheme = MaterialTheme.colorScheme
+
+    // Sound and vibration are full pages, not pop-ups.
+    if (page == "sound") { SoundPage(alarm, { alarm = it }, { page = null }); return }
+    if (page == "vibration") { VibrationPage(alarm, { alarm = it }, { page = null }); return }
 
     Scaffold(
         containerColor = scheme.background,
@@ -143,13 +147,21 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
 
             // Sound + toggles
             OptionGroup {
-                Row(Modifier.fillMaxWidth().clickable { showSoundPicker = true }.padding(16.dp),
+                Row(Modifier.fillMaxWidth().clickable { page = "sound" }.padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Sound", fontSize = 16.sp, color = scheme.onSurface)
-                    Text(alarm.soundName, fontSize = 14.sp, color = scheme.onSurfaceVariant)
+                    Text(alarm.soundName + if (alarm.layers.isNotEmpty()) " +${alarm.layers.size}" else "", fontSize = 14.sp, color = scheme.onSurfaceVariant)
                 }
                 HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
                 SettingsToggle("Vibrate", null, alarm.vibrate) { alarm = alarm.copy(vibrate = it) }
+                if (alarm.vibrate) {
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+                    Row(Modifier.fillMaxWidth().clickable { page = "vibration" }.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Vibration pattern", fontSize = 16.sp, color = scheme.onSurface)
+                        Text(VibrationPattern.fromId(alarm.vibrationPattern).label, fontSize = 14.sp, color = scheme.onSurfaceVariant)
+                    }
+                }
                 HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
                 SettingsToggle("Gradually louder", "Volume ramps up while it rings", alarm.volumeRamp) { alarm = alarm.copy(volumeRamp = it) }
                 HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
@@ -181,9 +193,6 @@ fun AlarmEditScreen(alarmId: String?, repository: AlarmRepository, onBack: () ->
 
     if (showTimePicker) TimePickerDialogNew(initialHour = alarm.hour, initialMinute = alarm.minute,
         onDismiss = { showTimePicker = false }, onConfirm = { h, m -> alarm = alarm.copy(hour = h, minute = m); showTimePicker = false })
-    if (showSoundPicker) SoundPicker(currentUri = alarm.soundUri, currentName = alarm.soundName,
-        onDismiss = { showSoundPicker = false }, onSelected = { uri, name ->
-            alarm = alarm.copy(soundUri = uri.toString(), soundName = name); showSoundPicker = false })
     if (showDeleteConfirm) AlertDialog(onDismissRequest = { showDeleteConfirm = false },
         title = { Text("Delete alarm?") }, text = { Text("This cannot be undone.") },
         confirmButton = { TextButton(onClick = {

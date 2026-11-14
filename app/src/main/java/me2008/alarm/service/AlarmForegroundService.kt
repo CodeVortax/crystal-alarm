@@ -9,28 +9,24 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
-import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import me2008.alarm.AlarmAlertActivity
+import me2008.alarm.audio.MixPlayer
+import me2008.alarm.audio.Vibrate
 import me2008.alarm.data.AlarmRepository
+import me2008.alarm.data.allSounds
 
 /**
  * Foreground service that plays alarm sound + vibration and shows the alert activity.
  * Call [start] to fire, [stop] to dismiss.
  */
 class AlarmForegroundService : Service() {
-    private var mediaPlayer: MediaPlayer? = null
+    private var mix: MixPlayer? = null
     private var vibrator: Vibrator? = null
-    private var volumeRampJob: Thread? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -53,46 +49,24 @@ class AlarmForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    fun stopAlarm() {
-        volumeRampJob?.interrupt()
-        mediaPlayer?.apply { if (isPlaying) stop(); release() }; mediaPlayer = null
+    /** Runs whenever the service ends, so Stop/Dismiss always silences the sound as well as the vibration. */
+    override fun onDestroy() {
+        silence()
+        super.onDestroy()
+    }
+
+    private fun silence() {
+        mix?.stop(); mix = null
         vibrator?.cancel()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     private fun playAlarm(id: String) {
         val alarm = AlarmRepository(this).get(id) ?: return
-        val soundUri = if (alarm.soundUri == "default") Settings.System.DEFAULT_ALARM_ALERT_URI
-        else Uri.parse(alarm.soundUri)
-        try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                setDataSource(this@AlarmForegroundService, soundUri)
-                isLooping = true
-                setVolume(if (alarm.volumeRamp) 0.05f else 1.0f, if (alarm.volumeRamp) 0.05f else 1.0f)
-                prepare(); start()
-            }
-        } catch (_: Exception) {
-            try { MediaPlayer.create(this, Settings.System.DEFAULT_ALARM_ALERT_URI)?.apply {
-                isLooping = true; start()
-            } } catch (_: Exception) {}
+        silence()
+        mix = MixPlayer(this).also {
+            it.play(alarm.allSounds(), alarm.masterVolume, if (alarm.volumeRamp) 15 else 0)
         }
-        if (alarm.volumeRamp && mediaPlayer != null) {
-            val player = mediaPlayer!!
-            volumeRampJob = Thread {
-                for (i in 1..50) {
-                    if (Thread.interrupted()) return@Thread
-                    val vol = minOf(1.0f, 0.05f + (i.toFloat() / 50) * 0.95f)
-                    player.setVolume(vol, vol)
-                    try { Thread.sleep(300L) } catch (_: InterruptedException) { return@Thread }
-                }
-            }.apply { start() }
-        }
-        if (alarm.vibrate) vibrator?.vibrate(
-            VibrationEffect.createWaveform(longArrayOf(0, 500, 500, 500, 1000, 500, 500, 500), 1))
+        if (alarm.vibrate) Vibrate.start(vibrator, alarm.vibrationPattern, alarm.vibrationCustom, alarm.vibrationStrength)
     }
 
     private fun createChannel() {
